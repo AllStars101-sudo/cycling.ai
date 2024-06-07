@@ -93,15 +93,11 @@ def logout():
     )
 
 
-@app.route('/calculate', methods=['GET', 'POST'])
+@app.route('/calculate', methods=['POST'])
 def calculate():
-    if request.method == 'POST':
-        data = request.get_json()
-        start = data.get('start', 'UNSW Sydney')
-        end = data.get('end', 'Bondi Beach')
-    else:
-        start = session.get('start', 'UNSW Sydney')
-        end = session.get('end', 'Bondi Beach')
+    data = request.get_json()
+    start = data.get('start')
+    end = data.get('end')
 
     print(f"Start Location: {start}")
     print(f"End Location: {end}")
@@ -124,19 +120,21 @@ def calculate():
 
 @app.route("/directions")
 def directions():
-    print(session.get('start'))  # debug statement
-    print(session.get('end'))    # debug statement
+    start = session.get('start')
+    end = session.get('end')
     return render_template(
         "directions.html",
         session=session.get("user"),
         pretty=json.dumps(session.get("user"), indent=4),
         google_maps_key=env.get("GOOGLE_API_KEY"),
+        start=start,
+        end=end
     )
 
 @app.route('/route_info', methods=['GET'])
 def route_info():
-    start = request.args.get('start', 'UNSW Sydney')
-    end = request.args.get('end', 'Bondi Beach')
+    start = session.get('start')
+    end = session.get('end')
 
     # Initialize data
     directions_data = places_data = elevation_data = weather_data = traffic_data = roadworks_data = None
@@ -185,7 +183,7 @@ def route_info():
         weather_data = weather_response.json()
 
         # Get traffic data from Bing Maps API
-        traffic_response = requests.get(f'http://dev.virtualearth.net/REST/v1/Traffic/Incidents/{start},{end}?key={env.get("BING_MAPS_API_KEY")}')
+        traffic_response = requests.get(f'http://dev.virtualearth.net/REST/v1/Traffic/Incidents/{start_lat},{start_lng}?key={env.get("BING_MAPS_API_KEY")}')
         traffic_data = traffic_response.json()
         print("Traffic Data:", traffic_data)
 
