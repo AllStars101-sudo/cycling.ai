@@ -36,26 +36,34 @@
       };
 
       function calculateAndDisplayRoute(directionsService, directionsRenderer) {
-        fetch('/calculate')
-          .then(response => response.json())
-          .then(data => {
-            directionsService.route(
-              {
-                origin: data.start,
-                destination: data.end,
-                travelMode: "BICYCLING",
-              },
-              (response, status) => {
-                if (status === "OK") {
-                  directionsRenderer.setDirections(response);
-                  loadRouteInfo(data.start, data.end);
-                } else {
-                  window.alert("Directions request failed due to " + status);
-                }
-              }
-            );
-          });
-      }
+        const start = "{{ start }}";
+        const end = "{{ end }}";
+        fetch('/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ start: start, end: end }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        directionsService.route(
+          {
+            origin: data.start,
+            destination: data.end,
+            travelMode: "BICYCLING",
+          },
+          (response, status) => {
+            if (status === "OK") {
+              directionsRenderer.setDirections(response);
+              loadRouteInfo(data.start, data.end);
+            } else {
+              window.alert("Directions request failed due to " + status);
+            }
+          }
+        );
+      });
+    }
 
       function loadRouteInfo(start, end) {
             fetch(`/route_info?start=${start}&end=${end}`)
