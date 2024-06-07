@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{google_maps_key}}&callback=initMap" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
+  <script src="https://code.iconify.design/1/1.0.5/iconify.min.js"></script>
+  <script>
+    window.onload = function() {
+      function toggleSidebar() {
+        const routeInfo = document.getElementById('route-info');
+        const closeSidebar = document.getElementById('toggle-sidebar');
+        if (routeInfo.classList.contains('open')) {
+          routeInfo.classList.remove('open');
+          closeSidebar.innerHTML = '&#9776;';
+        } 
+        else {
+          routeInfo.classList.add('open');
+          closeSidebar.innerHTML = '&times;';
+        }
+      }
+      document.getElementById('toggle-sidebar').addEventListener('click', toggleSidebar);
+    }
+  </script>  
+    <script>
+      let map;
+      window.initMap = () => {
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer();
+        const mapOptions = {
+          zoom: 7,
+          center: { lat: 41.85, lng: -87.65 },
+        };
+        map = new google.maps.Map(document.getElementById("map"), mapOptions);
+        directionsRenderer.setMap(map);
+        calculateAndDisplayRoute(directionsService, directionsRenderer);
+      };
+
+      function calculateAndDisplayRoute(directionsService, directionsRenderer) {
+        fetch('/calculate')
+          .then(response => response.json())
+          .then(data => {
+            directionsService.route(
+              {
+                origin: data.start,
+                destination: data.end,
+                travelMode: "BICYCLING",
+              },
+              (response, status) => {
+                if (status === "OK") {
+                  directionsRenderer.setDirections(response);
+                  loadRouteInfo(data.start, data.end);
+                } else {
+                  window.alert("Directions request failed due to " + status);
+                }
+              }
+            );
+          });
+      }
+
+      function loadRouteInfo(start, end) {
+            fetch(`/route_info?start=${start}&end=${end}`)
+                .then(response => response.json())
+                .then(data => {
+                    let routeInfo = document.getElementById('route-info');
+                    routeInfo.innerHTML += `<h2><i class="iconify" data-icon="ic:round-place" data-width="30" data-height="30" style="color:#ffa726;"></i> Start: ${data.start}</h2>`;
+                    routeInfo.innerHTML += `<h2><i class="iconify" data-icon="teenyicons:location-solid" data-width="30" data-height="30" style="color:#4caf50;"></i> End: ${data.end}</h2>`;
+                    routeInfo.innerHTML += `<h2><i class="iconify" data-icon="material-symbols:elevation" data-width="30" data-height="30" style="color:#009688;"></i>Average Elevation:</h2> <p>${data.elevation} m</p>`;
+                    routeInfo.innerHTML += `<h2><i class="iconify" data-icon="fluent-mdl2:calories-add" data-width="30" data-height="30" style="color:#9c27b0;"></i> Calories you'll burn: </h2><p>${data.calories_burned} kcal</p>`;
+                    routeInfo.innerHTML += `<h2><i class="iconify" data-icon="logos:openai-icon" data-width="30" data-height="30" style="color:#3f51b5;"></i> AI-generated response:</h2><br><p> ${data.response}</p>`;
+                    routeInfo.classList.add('open');
+
+                    document.getElementById('close-sidebar').addEventListener('click', () => {
+                        routeInfo.classList.remove('open');
+                    });
+                });
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;700&display=swap');
+        body {
+            font-family: 'Lato', sans-serif;
+        }
+        h2 {
+            font-size: 22px;
+            color: #333;
+            font-weight: 700;
+            padding: 15px 0;
+            border-bottom: 1px solid #e7e7e7;
+            margin: 0 0 15px 0;
+        }
+        p i {
+            color: #4caf50;
+            margin-right: 10px;
+        }
+    </style>
+  </head>
+  
+  <body>
+    <div id="route-info">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeSidebar()">&times;</a>
+    </div>
+    <button id="open-sidebar" class="btn-toggle" onclick="openSidebar()">&#9776;</button>
+    <div id="map"></div>
+      <script>
+        function openSidebar() {
+  document.getElementById("route-info").style.width = "350px";
+  document.getElementById("open-sidebar").style.display = "none";
+  document.getElementById("map").classList.remove('full');
+}
+
+function closeSidebar() {
+  document.getElementById("route-info").style.width = "0";
+  document.getElementById("open-sidebar").style.display = "block";
+  document.getElementById("map").classList.add('full');
+}
+      </script>
+    </body>
+</html>

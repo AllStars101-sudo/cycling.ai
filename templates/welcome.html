@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zwift | Welcome</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="container">
+        <div class="glassmorphic-form">
+            <h1 class="display-4 text-center">Zwift</h1>
+            <div id="user-message">
+                {% if session %}
+    <h2 class="text-center">Welcome, {{session.userinfo.given_name}}!</h2>
+    <p class="text-center"><a href="/logout" class="btn btn-primary">Logout</a></p>
+    <p class="text-center"><a href="/home" class="btn btn-primary">Go to Home Page</a></p>
+{% else %}
+    <h2 class="text-center">Welcome, Guest!</h2>
+    <p class="text-center"><a href="/login" class="btn btn-primary">Login</a></p>
+{% endif %}
+            </div>
+</body>
+</html>
