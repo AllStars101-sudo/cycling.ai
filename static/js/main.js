@@ -133,7 +133,7 @@ const WeatherSnap = () => {
 };
 
 const Reminder = () => {
-    const given_name = document.body.getAttribute('given-name') || 'Guest';
+    const given_name = document.body.getAttribute('data-given-name') || 'Guest';
     return (React.createElement("div", { className: "reminder" },
         React.createElement("div", { className: "reminder-icon" },
             React.createElement("i", { className: "fa fa-hand-peace-o" })),
@@ -453,6 +453,29 @@ const UserStatusButton = (props) => {
         React.createElement("i", { className: props.icon })));
 };
 
+const QRCodeButton = () => {
+    const handleOnClick = async () => {
+      try {
+        const response = await fetch('/generate_qr_code');
+        const data = await response.json();
+        const qrCodeUrl = data.qr_code_url;
+        const userName = data.user_name;
+        const userId = data.user_id;
+  
+        // Open the QR code window with the URL and user information as query parameters
+        window.open(`/linking?qrCodeUrl=${encodeURIComponent(qrCodeUrl)}&userName=${encodeURIComponent(userName)}&userId=${encodeURIComponent(userId)}`, '_blank', 'width=700,height=300');
+      } catch (error) {
+        console.error('Error fetching QR code:', error);
+      }
+    };
+  
+    return (
+      React.createElement("button", { id: "qr-code-button", className: "user-status-button clear-button", type: "button", onClick: handleOnClick },
+        React.createElement("i", { className: "fa-solid fa-qrcode" })
+      )
+    );
+  };
+
 const Menu = () => {
     return (React.createElement("div", { id: "app-menu" },
         React.createElement("div", { id: "app-menu-content-wrapper" },
@@ -462,7 +485,10 @@ const Menu = () => {
                         React.createElement(Info, { id: "app-menu-info" }),
                         React.createElement(Reminder, null)),
                     React.createElement("div", { className: "app-menu-content-header-section" },
-                        React.createElement(UserStatusButton, { icon: "fa-solid fa-arrow-right-from-arc", id: "sign-out-button", userStatus: UserStatus.LoggedOut }))),
+                        React.createElement(UserStatusButton, { icon: "fa-solid fa-arrow-right-from-arc", id: "sign-out-button", userStatus: UserStatus.LoggedOut }),
+                        React.createElement(QRCodeButton, null)
+                    )
+                ),
                 React.createElement(QuickNav, null),
                 React.createElement(Weather, null),
                 React.createElement(Restaurants, null),
