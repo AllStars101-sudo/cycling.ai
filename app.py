@@ -15,6 +15,14 @@ import openai
 import google.generativeai as genai
 import os
 
+from supabase import create_client, Client
+load_dotenv()
+
+# Initialize Supabase client
+url = os.getenv("SUPABASE_PROJECT_URL")
+key = os.getenv("SUPABASE_PUBLIC_API_KEY")
+supabase: Client = create_client(url, key)
+
 genai.configure(api_key=env.get('GEMINI_API_KEY'))
 # Create the model
 # See https://ai.google.dev/api/python/google/generativeai/GenerativeModel
@@ -80,6 +88,11 @@ def test():
 def callback():
     token = oauth.auth0.authorize_access_token()
     session["user"] = token
+
+    user_info = token['userinfo']
+    user_id = user_info['sub']
+    session["user_id"] = user_id
+
     return redirect("/home")
 
 
@@ -236,6 +249,24 @@ def route_info():
     # Split the response text into paragraphs and wrap each with <p> tags
     paragraphs = response_text.split('\n')
     response_text_html = ''.join(f'<p>{paragraph.strip()}</p>' for paragraph in paragraphs if paragraph.strip())
+
+    # Get the user ID from the session
+    user_id = session.get('user_id')
+
+    # Store the additional data in Supabase
+    data = {
+        'user_id': user_id,
+        'start': start,
+        'end': end,
+        'elevation': int(average_elevation),
+        'weather': weather_data,
+        'traffic': traffic_data,
+        'roadworks': roadworks_data,
+        'calories_burned': int(calories_burned),
+        'response': response_text_html
+    }
+    supabase.table('trips').insert(data).execute()
+
     return jsonify({
         'start': start,
         'end': end,
@@ -329,6 +360,12 @@ def generate_image():
     except Exception as e:
         print(f"Error in generating image: {str(e)}")
         return jsonify({'error': 'Failed to generate image'}), 500
+
+@app.route('/trips', methods=['GET'])
+def get_trips():
+    user_id = session.get('user_id')
+    trips = supabase.table('trips').select('*').eq('user_id', user_id).limit(4).execute()
+    return jsonify(trips.data)
 
 @app.errorhandler(500)
 def server_error(e):
