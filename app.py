@@ -220,10 +220,10 @@ def route_info():
     calories_burned = distance * 50  # Rough estimate of calories burned per km
 
     # Prepare the data for the OpenAI API
-    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}."
+    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well. Format your response in plain English. Your response must be separeted into paragraphs: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}."
 
     # Truncate the data to fit within the token limit
-    data = truncate_text(data)
+    # data = truncate_text(data)
 
     # Generate a summary with Gemini 1.5 Flash
     model = genai.GenerativeModel(
@@ -232,9 +232,10 @@ def route_info():
         # safety_settings = Adjust safety settings
         # See https://ai.google.dev/gemini-api/docs/safety-settings
     )
-    response_text = model.generate_content(data)
-    response_text_html = response_text.replace('\n', '<br>')
-
+    response_text = model.generate_content(data).candidates[0].content.parts[0].text
+    # Split the response text into paragraphs and wrap each with <p> tags
+    paragraphs = response_text.split('\n')
+    response_text_html = ''.join(f'<p>{paragraph.strip()}</p>' for paragraph in paragraphs if paragraph.strip())
     return jsonify({
         'start': start,
         'end': end,
