@@ -558,15 +558,15 @@
     padding: 30px;
   }
   #app #movies-section .menu-section-content .movie-card .movie-card-content .movie-card-info span {
-    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
   }
   #app #movies-section .menu-section-content .movie-card .movie-card-content .movie-card-info .movie-card-title {
     color: whitesmoke;
     font-size: 2em;
   }
   #app #movies-section .menu-section-content .movie-card .movie-card-content .movie-card-info .movie-card-desc {
-    color: #c8c8c8;
-    font-size: 0.9em;
+    color: #ffffff;
+    font-size: 1em;
   }
   #app #movies-section .menu-section-content .movie-card .movie-card-content i {
     bottom: 0px;

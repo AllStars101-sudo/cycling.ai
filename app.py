@@ -10,7 +10,21 @@ import polyline
 from datetime import datetime
 import openai
 from transformers import BertTokenizer
+from geopy.geocoders import Nominatim
+import openai
+import google.generativeai as genai
+import os
 
+genai.configure(api_key=env.get('GEMINI_API_KEY'))
+# Create the model
+# See https://ai.google.dev/api/python/google/generativeai/GenerativeModel
+generation_config = {
+  "temperature": 1,
+  "top_p": 0.95,
+  "top_k": 64,
+  "max_output_tokens": 8192,
+  "response_mime_type": "application/json",
+}
 
 if ENV_FILE := find_dotenv():
     load_dotenv(ENV_FILE)
@@ -206,22 +220,22 @@ def route_info():
     calories_burned = distance * 50  # Rough estimate of calories burned per km
 
     # Prepare the data for the OpenAI API
-    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}."
+    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well. Format your response in plain English. Your response must be separeted into paragraphs: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}."
 
     # Truncate the data to fit within the token limit
-    data = truncate_text(data)
+    # data = truncate_text(data)
 
-    # Generate a summary with GPT-3.5
-    response = openai.ChatCompletion.create(
-      model="gpt-3.5-turbo-16k",
-      messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": data},
-        ]
+    # Generate a summary with Gemini 1.5 Flash
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        generation_config=generation_config,
+        # safety_settings = Adjust safety settings
+        # See https://ai.google.dev/gemini-api/docs/safety-settings
     )
-    response_text = response['choices'][0]['message']['content']
-    response_text_html = response_text.replace('\n', '<br>')
-
+    response_text = model.generate_content(data).candidates[0].content.parts[0].text
+    # Split the response text into paragraphs and wrap each with <p> tags
+    paragraphs = response_text.split('\n')
+    response_text_html = ''.join(f'<p>{paragraph.strip()}</p>' for paragraph in paragraphs if paragraph.strip())
     return jsonify({
         'start': start,
         'end': end,
@@ -233,6 +247,88 @@ def route_info():
         'response': response_text_html,
     })
 
+@app.route('/popular-spots', methods=['GET'])
+def popular_spots():
+    try:
+        # Check if the user has granted location permission
+        if request.args.get('lat') and request.args.get('lng'):
+            lat = request.args.get('lat')
+            lng = request.args.get('lng')
+        else:
+            # Use Google Maps Geolocation API for IP-based geolocation
+            url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={env.get('GOOGLE_API_KEY')}"
+            payload = {
+                'considerIp': 'true'
+            }
+            response = requests.post(url, json=payload)
+            data = response.json()
+
+            if 'location' in data:
+                lat = data['location']['lat']
+                lng = data['location']['lng']
+            else:
+                # Fallback to default location if geolocation fails
+                lat, lng = 37.7749, -122.4194  # Example: San Francisco coordinates
+    except Exception as e:
+        print(f"Error in geolocation: {str(e)}")
+        # Fallback to default location if an exception occurs
+        lat, lng = 37.7749, -122.4194  # Example: San Francisco coordinates
+
+    try:
+        # Make a request to the Google Maps Places API
+        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=5000&type=tourist_attraction&key={env.get('GOOGLE_API_KEY')}"
+        response = requests.get(url)
+        data = response.json()
+
+        # Extract the place names from the API response
+        place_names = [result['name'] for result in data['results']]
+
+        movies = []
+        # Generate a description of the spots with Gemini 1.5 Flash
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            generation_config=generation_config,
+            # safety_settings = Adjust safety settings
+            # See https://ai.google.dev/gemini-api/docs/safety-settings
+        )
+        for i, place_name in enumerate(place_names[:4]):  # Limit to 4 places
+            response = model.generate_content("Write a very short summary of the following place not exceeding 1 line: " + place_name)
+            description = json.loads(response.candidates[0].content.parts[0].text)
+            movies.append({
+                'id': i + 1,
+                'title': place_name,
+                'image': '',
+                'desc': description['summary']
+            })
+
+        return jsonify({'movies': movies})
+    except Exception as e:
+        print(f"Error in fetching popular spots: {str(e)}")
+        return jsonify({'error': 'Failed to fetch popular spots'}), 500
+
+@app.route('/generate_image', methods=['POST'])
+def generate_image():
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt')
+
+        if not prompt:
+            return jsonify({'error': 'Missing prompt'}), 400
+
+        client = openai.OpenAI(api_key=env.get("OPENAI_API_KEY"))
+        response = client.images.generate(
+            model="dall-e-2",
+            prompt="A beautiful image of " + prompt,
+            size="512x512",
+            n=1,
+        )
+
+        image_url = response.data[0].url
+
+        return jsonify({'image_url': image_url})
+    except Exception as e:
+        print(f"Error in generating image: {str(e)}")
+        return jsonify({'error': 'Failed to generate image'}), 500
 
 @app.errorhandler(500)
 def server_error(e):

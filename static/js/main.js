@@ -5,6 +5,7 @@ var UserStatus;
     UserStatus["LoggingIn"] = "Logging In";
     UserStatus["LoggedOut"] = "Logged Out";
 })(UserStatus || (UserStatus = {}));
+
 var Default;
 (function (Default) {
     Default["PIN"] = "1234";
@@ -35,6 +36,27 @@ const T = {
     formatSegment: (segment) => {
         return segment < 10 ? `0${segment}` : segment;
     }
+}
+
+const fetchPopularSpots = async (latitude, longitude) => {
+    const response = await fetch(`/places?lat=${latitude}&lng=${longitude}`);
+    const data = await response.json();
+    return data.results.map(place => ({
+        name: place.name,
+        image: place.photos ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}` : 'default_image_url'
+    }));
+};
+
+const fetchDalleImage = async (placeName) => {
+    const response = await fetch('/generate_image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: placeName }),
+    });
+    const data = await response.json();
+    return data.image_url;
 };
 
 const useCurrentDateEffect = () => {
@@ -45,11 +67,12 @@ const useCurrentDateEffect = () => {
             if (update.getSeconds() !== date.getSeconds()) {
                 setDate(update);
             }
-        }, 100);
+        }, 1000);
         return () => clearInterval(interval);
     }, [date]);
     return date;
 };
+
 const ScrollableComponent = (props) => {
     const ref = React.useRef(null);
     const [state, setStateTo] = React.useState({
@@ -75,13 +98,13 @@ const ScrollableComponent = (props) => {
     };
     return (React.createElement("div", { ref: ref, className: classNames("scrollable-component", props.className), id: props.id, onMouseDown: handleOnMouseDown, onMouseMove: handleOnMouseMove, onMouseUp: handleOnMouseUp, onMouseLeave: handleOnMouseUp }, props.children));
 };
+
 const WeatherSnap = () => {
     const [weather, setWeather] = React.useState('');
     const [temperature, setTemperature] = React.useState(null);
 
     const fetchWeather = async (latitude, longitude) => {
-        // Get your free OpenWeatherMap API key by signing up at https://home.openweathermap.org/users/sign_up
-        const apiKey ='67531f469868e5a6bb89333b4f5c439e';
+        const apiKey = '67531f469868e5a6bb89333b4f5c439e';
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`);
         const data = await response.json();
 
@@ -92,8 +115,8 @@ const WeatherSnap = () => {
     React.useEffect(() => {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
-                fetchWeather(position.coords.latitude, position.coords.longitude)
-            })
+                fetchWeather(position.coords.latitude, position.coords.longitude);
+            });
         } else {
             alert('Geolocation is not supported');
         }
@@ -107,7 +130,8 @@ const WeatherSnap = () => {
             React.createElement("span", { className: "weather-status" }, `(${weather})`)
         )
     );
-}
+};
+
 const Reminder = () => {
     const given_name = document.body.getAttribute('given-name') || 'Guest';
     return (React.createElement("div", { className: "reminder" },
@@ -116,10 +140,12 @@ const Reminder = () => {
         React.createElement("span", { className: "reminder-text" },
             `G'day, ${given_name}!`)));
 };
+
 const Time = () => {
     const date = useCurrentDateEffect();
     return (React.createElement("span", { className: "time" }, T.format(date)));
 };
+
 const Info = (props) => {
     return (React.createElement("div", { id: props.id, className: "info" },
         React.createElement(Time, null),
@@ -221,8 +247,7 @@ class QuickNav extends React.Component {
     }
   }
   
-  ReactDOM.render(e(QuickNav), document.getElementById('root'));
-  
+ReactDOM.render(e(QuickNav), document.getElementById('root'));
 
 const Weather = () => {
     const getDays = () => {
@@ -278,13 +303,14 @@ const Weather = () => {
                 React.createElement("div", { className: "day-card-content" },
                     React.createElement("span", { className: "day-weather-temperature" },
                         day.temperature,
-                        React.createElement("span", { className: "day-weather-temperature-unit" }, "\u00B0F")),
+                        React.createElement("span", { className: "day-weather-temperature-unit" }, "\u00B0C")),
                     React.createElement("i", { className: classNames("day-weather-icon", getIcon(), day.weather.toLowerCase()) }),
                     React.createElement("span", { className: "day-name" }, day.name))));
         });
     };
     return (React.createElement(MenuSection, { icon: "fa-solid fa-sun", id: "weather-section", scrollable: true, title: "How's it look out there?" }, getDays()));
 };
+
 const Restaurants = () => {
     const getRestaurants = () => {
         return [{
@@ -320,48 +346,79 @@ const Restaurants = () => {
     };
     return (React.createElement(MenuSection, { icon: "fa fa-history", id: "restaurants-section", title: "Your past trips" }, getRestaurants()));
 };
+
 const Movies = () => {
+    const [movies, setMovies] = React.useState([]);
+
+    React.useEffect(() => {
+        const fetchPopularSpots = async () => {
+            try {
+                const response = await fetch('/popular-spots');
+                const data = await response.json();
+                console.log('Received data:', data);
+
+                // Set the movies state with the received data
+                setMovies(data.movies);
+
+                // Fetch DALL-E 2 generated images for each movie asynchronously
+                data.movies.forEach(async (movie) => {
+                    const imageResponse = await fetch('/generate_image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ prompt: movie.title }),
+                    });
+                    const imageData = await imageResponse.json();
+
+                    // Update the specific movie with the generated image URL
+                    setMovies((prevMovies) =>
+                        prevMovies.map((prevMovie) =>
+                            prevMovie.id === movie.id ? { ...prevMovie, image: imageData.image_url } : prevMovie
+                        )
+                    );
+                });
+            } catch (error) {
+                console.error('Error fetching popular spots:', error);
+            }
+        };
+
+        fetchPopularSpots();
+    }, []);
+
+    console.log('Movies state:', movies);
+
     const getMovies = () => {
-        return [{
-                desc: "The Sydney Opera House is an iconic architectural masterpiece located in Sydney, Australia, renowned for its distinctive sail-like design and hosting world-class performing arts events.",
-                id: 1,
-                icon: "fa-solid fa-galaxy",
-                image: "https://media.architecturaldigest.com/photos/63d82d299dd44a3242d15ade/3:2/w_3000,h_2000,c_limit/GettyImages-982774858.jpg",
-                title: "Sydney Opera House"
-            }, {
-                desc: "World-famous coastal paradise nestled in Sydney, Australia, celebrated for its golden sands, vibrant surf culture, and breathtaking ocean views.",
-                id: 2,
-                icon: "fa-solid fa-hat-wizard",
-                image: "https://www.sydney.com/sites/sydney/files/styles/landscape_992x558/public/2022-04/164098-56.jpg?h=ba809569&itok=BqZVy1dW",
-                title: "Bondi Beach"
-            }, {
-                desc: "Bustling waterfront precinct in Sydney, Australia, offering a vibrant blend of entertainment, dining, shopping, and stunning harbor views, making it a popular destination for locals and tourists alike.",
-                id: 3,
-                icon: "fa-solid fa-broom-ball",
-                image: "https://www.darlingharbour.com/getmedia/f178f096-38af-4a70-bedc-94c1c5a5da26/darling-harbour-unhcrfireworks-2022-credit-henry-li-1_1.jpg",
-                title: "Darling Harbour"
-            }, {
-                desc: "prominent observation deck situated atop Sydney Tower, offering breathtaking 360-degree views of the city skyline",
-                id: 4,
-                icon: "fa-solid fa-starship-freighter",
-                image: "https://www.sydneytowereye.com.au/media/iauj4dnh/thumbnail_ste-rediscover-frontpagehero-1920x1080px.jpeg",
-                title: "Sydney Tower Eye"
-            }].map((movie) => {
+        return movies.map((movie) => {
             const styles = {
-                backgroundImage: `url(${movie.image})`
+                backgroundImage: `url(${movie.image})`,
             };
             const id = `movie-card-${movie.id}`;
-            return (React.createElement("div", { key: movie.id, id: id, className: "movie-card" },
-                React.createElement("div", { className: "movie-card-background background-image", style: styles }),
-                React.createElement("div", { className: "movie-card-content" },
-                    React.createElement("div", { className: "movie-card-info" },
-                        React.createElement("span", { className: "movie-card-title" }, movie.title),
-                        React.createElement("span", { className: "movie-card-desc" }, movie.desc)),
-                    React.createElement("i", { className: movie.icon }))));
+            return (
+                React.createElement("div", { key: movie.id, id: id, className: "movie-card" },
+                    React.createElement("div", { className: "movie-card-background background-image", style: styles }),
+                    React.createElement("div", { className: "movie-card-content" },
+                        React.createElement("div", { className: "movie-card-info" },
+                            React.createElement("span", { className: "movie-card-title" }, movie.title),
+                            React.createElement("span", { className: "movie-card-desc" }, movie.desc)
+                        ),
+                        React.createElement("i", { className: "fa-solid fa-map-marker-alt" })
+                    )
+                )
+            );
         });
     };
-    return (React.createElement(MenuSection, { icon: "fa-solid fa-camera-movie", id: "movies-section", scrollable: true, title: "Popular spots around you" }, getMovies()));
+
+    return (
+        React.createElement(MenuSection, {
+            icon: "fa-solid fa-camera-movie",
+            id: "movies-section",
+            scrollable: true,
+            title: "Popular spots around you",
+        }, getMovies())
+    );
 };
+
 const UserStatusButton = (props) => {
     const { userStatus, setUserStatusTo } = React.useContext(AppContext);
     const handleOnClick = () => {
@@ -370,6 +427,7 @@ const UserStatusButton = (props) => {
     return (React.createElement("button", { id: props.id, className: "user-status-button clear-button", disabled: userStatus === props.userStatus, type: "button", onClick: handleOnClick },
         React.createElement("i", { className: props.icon })));
 };
+
 const Menu = () => {
     return (React.createElement("div", { id: "app-menu" },
         React.createElement("div", { id: "app-menu-content-wrapper" },
@@ -385,6 +443,7 @@ const Menu = () => {
                 React.createElement(Restaurants, null),
                 React.createElement(Movies, null)))));
 };
+
 const Background = () => {
     const { userStatus, setUserStatusTo } = React.useContext(AppContext);
     const handleOnClick = () => {
@@ -395,11 +454,14 @@ const Background = () => {
     return (React.createElement("div", { id: "app-background", onClick: handleOnClick },
         React.createElement("div", { id: "app-background-image", className: "background-image" })));
 };
+
 const Loading = () => {
     return (React.createElement("div", { id: "app-loading-icon" },
         React.createElement("i", { className: "fa-solid fa-spinner-third" })));
 };
+
 const AppContext = React.createContext(null);
+
 const App = () => {
     const [userStatus, setUserStatusTo] = React.useState(UserStatus.LoggedOut);
     const getStatusClass = () => {
@@ -414,4 +476,5 @@ const App = () => {
                 React.createElement(UserStatusButton, { icon: "fa-solid fa-arrow-right-to-arc", id: "sign-in-button", userStatus: UserStatus.LoggedIn })),
             React.createElement(Loading, null))));
 };
+
 ReactDOM.render(React.createElement(App, null), document.getElementById("root"));
