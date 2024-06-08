@@ -398,7 +398,7 @@ def generate_qr_code():
 
     img = qr.make_image(fill_color="black", back_color="white")
     buffered = BytesIO()
-    img.save(buffered, format="PNG")
+    img.save(buffered)
     img_str = base64.b64encode(buffered.getvalue()).decode()
 
     return jsonify({'qr_code_url': f'data:image/png;base64,{img_str}', 'user_name': user_name, 'user_id': user_id})
