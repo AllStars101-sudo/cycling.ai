@@ -178,15 +178,33 @@ const WeatherSnap = () => {
         }
     }, []);
 
+    const getWeatherIcon = (weather) => {
+        switch (weather) {
+            case 'Clouds':
+                return 'fa-duotone fa-clouds';
+            case 'Rain':
+                return 'fa-duotone fa-cloud-rain';
+            case 'Thunderstorm':
+                return 'fa-duotone fa-cloud-bolt';
+            case 'Clear':
+                return 'fa-duotone fa-sun';
+            case 'Snow':
+                return 'fa-duotone fa-snowflake';
+            default:
+                return 'fa-duotone fa-cloud';
+        }
+    };
+
     return (
         React.createElement("span", { className: "weather" },
-            React.createElement("i", { className: "weather-type fa-duotone fa-sun" }),
+            React.createElement("i", { className: `weather-type ${getWeatherIcon(weather)}` }),
             React.createElement("span", { className: "weather-temperature-value" }, temperature),
             React.createElement("span", { className: "weather-temperature-unit" }, "°C"),
             React.createElement("span", { className: "weather-status" }, `(${weather})`)
         )
     );
 };
+
 
 const Reminder = () => {
     const given_name = document.body.getAttribute('given-name') || 'Guest';
