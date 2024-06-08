@@ -1,5 +1,3 @@
-const GOOGLE_API_KEY= "AIzaSyDEsryWHCvWHlLqfef1lua3mHy95s-C0S0"
-
 "use strict";
 var UserStatus;
 (function (UserStatus) {
@@ -39,60 +37,6 @@ const T = {
         return segment < 10 ? `0${segment}` : segment;
     }
 }
-
-
-const getCurrentPosition = () => {
-    return new Promise((resolve, reject) => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    resolve(position);
-                },
-                (error) => {
-                    reject(error);
-                }
-            );
-        } else {
-            reject(new Error('Geolocation is not supported by this browser.'));
-        }
-    });
-};
-
-const getCurrentAddress = async (apiKey, lat, lng) => {
-    try {
-        const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`);
-        const data = await response.json();
-        if (data.results && data.results.length > 0) {
-            return data.results[0].formatted_address;
-        } else {
-            throw new Error('No address found');
-        }
-    } catch (error) {
-        throw new Error(error.message);
-    }
-};
-
-const saveCoordinates = (lat, lng) => {
-    localStorage.setItem('latitude', lat);
-    localStorage.setItem('longitude', lng);
-};
-
-const displayAddress = async (apiKey) => {
-    try {
-        const position = await getCurrentPosition();
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        saveCoordinates(lat, lng);
-        const address = await getCurrentAddress(apiKey, lat, lng);
-        console.log(`Current Address: ${address}`);
-    } catch (error) {
-        console.error('Error fetching address:', error);
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    displayAddress(GOOGLE_API_KEY);
-});
 
 const fetchPopularSpots = async (latitude, longitude) => {
     const response = await fetch(`/places?lat=${latitude}&lng=${longitude}`);
@@ -167,7 +111,7 @@ const WeatherSnap = () => {
         setWeather(data.weather[0].main);
         setTemperature(data.main.temp);
     };
-
+    
     React.useEffect(() => {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -177,7 +121,7 @@ const WeatherSnap = () => {
             alert('Geolocation is not supported');
         }
     }, []);
-
+    
     return (
         React.createElement("span", { className: "weather" },
             React.createElement("i", { className: "weather-type fa-duotone fa-sun" }),
@@ -467,7 +411,7 @@ const Movies = () => {
         fetchPopularSpots();
     }, []);
 
-
+    console.log('Movies state:', movies);
 
     const getMovies = () => {
         return movies.map((movie) => {
