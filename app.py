@@ -398,7 +398,7 @@ def generate_qr_code():
 
     img = qr.make_image(fill_color="black", back_color="white")
     buffered = BytesIO()
-    img.save(buffered, format="PNG")
+    img.save(buffered)
     img_str = base64.b64encode(buffered.getvalue()).decode()
 
     return jsonify({'qr_code_url': f'data:image/png;base64,{img_str}', 'user_name': user_name, 'user_id': user_id})
@@ -413,6 +413,76 @@ def linking():
 @app.errorhandler(500)
 def server_error(e):
     return jsonify(error=str(e)), 500
+
+
+@app.route('/api/weather', methods=['GET'])
+def get_weather():
+    latitude = request.args.get('latitude')
+    longitude = request.args.get('longitude')
+    api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
+
+    try:
+        response = requests.get(
+            f'https://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={api_key}&units=metric'
+        )
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'Failed to fetch weather data'}), 500
+
+@app.route('/api/places', methods=['GET'])
+def get_places():
+    latitude = request.args.get('latitude')
+    longitude = request.args.get('longitude')
+    api_key = os.environ.get('GOOGLE_API_KEY')
+
+    try:
+        response = requests.get(
+            f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius=5000&type=tourist_attraction&key={api_key}'
+        )
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': 'Failed to fetch places data'}), 500
+
+@app.route('/api/reverse_geocode', methods=['GET'])
+def reverse_geocode():
+    latitude = request.args.get('latitude')
+    longitude = request.args.get('longitude')
+    api_key = os.environ.get('GOOGLE_API_KEY')
+
+    print(f"Reverse geocoding for latitude: {latitude}, longitude: {longitude}")
+
+    try:
+        url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&key={api_key}"
+        response = requests.get(url)
+        data = response.json()
+
+        if data["status"] == "OK":
+            address = data["results"][0]["formatted_address"]
+            print(f"Reverse geocoded address: {address}")
+            return jsonify({'address': address})
+        else:
+            print(f"Reverse geocoding failed with status: {data['status']}")
+            return jsonify({'error': 'Failed to fetch address'}), 500
+    except Exception as e:
+        print(f"Error in reverse geocoding: {str(e)}")
+        return jsonify({'error': 'Failed to fetch address'}), 500
+    latitude = request.args.get('latitude')
+    longitude = request.args.get('longitude')
+    api_key = os.environ.get('GOOGLE_API_KEY')
+
+    print(f"Reverse geocoding for latitude: {latitude}, longitude: {longitude}")
+
+    try:
+        geolocator = Nominatim(user_agent="myGeocoder")
+        location = geolocator.reverse(f"{latitude}, {longitude}")
+        address = location.address
+        print(f"Reverse geocoded address: {address}")
+        return jsonify({'address': address})
+    except Exception as e:
+        print(f"Error in reverse geocoding: {str(e)}")
+        return jsonify({'error': 'Failed to fetch address'}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=env.get("PORT", 3000), debug=True)
