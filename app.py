@@ -14,6 +14,9 @@ from geopy.geocoders import Nominatim
 import openai
 import google.generativeai as genai
 import os
+from io import BytesIO
+import base64
+import qrcode
 
 from supabase import create_client, Client
 load_dotenv()
@@ -74,8 +77,8 @@ def home():
 @app.route("/home")
 def test():
     given_name = ''
-    if 'userinfo' in session:  # <-- Check here if 'userinfo' in session
-        given_name = session['userinfo'].get('given_name', '')
+    if 'user' in session and 'userinfo' in session['user']:
+        given_name = session['user']['userinfo'].get('given_name', '')
     return render_template(
         "home.html",
         session=session.get("user"),
@@ -90,6 +93,7 @@ def callback():
     session["user"] = token
 
     user_info = token['userinfo']
+    print(user_info)
     user_id = user_info['sub']
     session["user_id"] = user_id
 
@@ -232,9 +236,15 @@ def route_info():
     distance = directions_data['routes'][0]['legs'][0]['distance']['value'] / 1000  # Distance in km
     calories_burned = distance * 50  # Rough estimate of calories burned per km
 
-    # Prepare the data for the OpenAI API
-    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well. Format your response in plain English. Your response must be separeted into paragraphs: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}."
-
+    user_id = session.get('user_id')
+    
+    # Retrieve the user's health data from Supabase
+    health_data_response = supabase.table('user_health_data').select('health_data').eq('user_id', user_id).order('created_at', desc=True).limit(1).execute()
+    health_data = health_data_response.data[0]['health_data'] if health_data_response.data else ''
+    
+    # Prepare the data for the Gemini API
+    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well. Format your response in plain English. Your response must be separeted into paragraphs: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}. Also, consider the following health data for the user if it is available: {health_data}."
+    
     # Truncate the data to fit within the token limit
     # data = truncate_text(data)
 
@@ -372,6 +382,33 @@ def get_trips():
     user_id = session.get('user_id')
     trips = supabase.table('trips').select('*').eq('user_id', user_id).limit(4).execute()
     return jsonify(trips.data)
+
+@app.route('/generate_qr_code', methods=['GET'])
+def generate_qr_code():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User not logged in'}), 401
+
+    user_info = session.get('user')
+    user_name = user_info.get('userinfo', {}).get('name', '')
+
+    qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+    qr.add_data(user_id)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+
+    return jsonify({'qr_code_url': f'data:image/png;base64,{img_str}', 'user_name': user_name, 'user_id': user_id})
+
+@app.route('/linking')
+def linking():
+    qr_code_url = request.args.get('qrCodeUrl')
+    user_name = request.args.get('userName')
+    user_id = request.args.get('userId')
+    return render_template('qrcode.html', qr_code_url=qr_code_url, user_name=user_name, user_id=user_id)
 
 @app.errorhandler(500)
 def server_error(e):

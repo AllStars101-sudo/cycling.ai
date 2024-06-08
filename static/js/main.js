@@ -1,5 +1,3 @@
-const GOOGLE_API_KEY= "AIzaSyDEsryWHCvWHlLqfef1lua3mHy95s-C0S0"
-
 "use strict";
 var UserStatus;
 (function (UserStatus) {
@@ -39,60 +37,6 @@ const T = {
         return segment < 10 ? `0${segment}` : segment;
     }
 }
-
-
-const getCurrentPosition = () => {
-    return new Promise((resolve, reject) => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    resolve(position);
-                },
-                (error) => {
-                    reject(error);
-                }
-            );
-        } else {
-            reject(new Error('Geolocation is not supported by this browser.'));
-        }
-    });
-};
-
-const getCurrentAddress = async (apiKey, lat, lng) => {
-    try {
-        const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`);
-        const data = await response.json();
-        if (data.results && data.results.length > 0) {
-            return data.results[0].formatted_address;
-        } else {
-            throw new Error('No address found');
-        }
-    } catch (error) {
-        throw new Error(error.message);
-    }
-};
-
-const saveCoordinates = (lat, lng) => {
-    localStorage.setItem('latitude', lat);
-    localStorage.setItem('longitude', lng);
-};
-
-const displayAddress = async (apiKey) => {
-    try {
-        const position = await getCurrentPosition();
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        saveCoordinates(lat, lng);
-        const address = await getCurrentAddress(apiKey, lat, lng);
-        console.log(`Current Address: ${address}`);
-    } catch (error) {
-        console.error('Error fetching address:', error);
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    displayAddress(GOOGLE_API_KEY);
-});
 
 const fetchPopularSpots = async (latitude, longitude) => {
     const response = await fetch(`/api/places?latitude=${latitude}&longitude=${longitude}`);
@@ -177,7 +121,7 @@ const WeatherSnap = () => {
         setWeather(data.weather[0].main);
         setTemperature(data.main.temp);
     };
-
+    
     React.useEffect(() => {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((position) => {
@@ -187,7 +131,7 @@ const WeatherSnap = () => {
             alert('Geolocation is not supported');
         }
     }, []);
-
+    
     return (
         React.createElement("span", { className: "weather" },
             React.createElement("i", { className: "weather-type fa-duotone fa-sun" }),
@@ -199,7 +143,7 @@ const WeatherSnap = () => {
 };
 
 const Reminder = () => {
-    const given_name = document.body.getAttribute('given-name') || 'Guest';
+    const given_name = document.body.getAttribute('data-given-name') || 'Guest';
     return (React.createElement("div", { className: "reminder" },
         React.createElement("div", { className: "reminder-icon" },
             React.createElement("i", { className: "fa fa-hand-peace-o" })),
@@ -509,7 +453,7 @@ const Movies = () => {
         fetchPopularSpots();
     }, []);
 
-
+    console.log('Movies state:', movies);
 
     const getMovies = () => {
         return movies.map((movie) => {
@@ -551,6 +495,29 @@ const UserStatusButton = (props) => {
         React.createElement("i", { className: props.icon })));
 };
 
+const QRCodeButton = () => {
+    const handleOnClick = async () => {
+      try {
+        const response = await fetch('/generate_qr_code');
+        const data = await response.json();
+        const qrCodeUrl = data.qr_code_url;
+        const userName = data.user_name;
+        const userId = data.user_id;
+  
+        // Open the QR code window with the URL and user information as query parameters
+        window.open(`/linking?qrCodeUrl=${encodeURIComponent(qrCodeUrl)}&userName=${encodeURIComponent(userName)}&userId=${encodeURIComponent(userId)}`, '_blank', 'width=700,height=300');
+      } catch (error) {
+        console.error('Error fetching QR code:', error);
+      }
+    };
+  
+    return (
+      React.createElement("button", { id: "qr-code-button", className: "user-status-button clear-button", type: "button", onClick: handleOnClick },
+        React.createElement("i", { className: "fa-solid fa-qrcode" })
+      )
+    );
+  };
+
 const Menu = () => {
     return (React.createElement("div", { id: "app-menu" },
         React.createElement("div", { id: "app-menu-content-wrapper" },
@@ -560,7 +527,10 @@ const Menu = () => {
                         React.createElement(Info, { id: "app-menu-info" }),
                         React.createElement(Reminder, null)),
                     React.createElement("div", { className: "app-menu-content-header-section" },
-                        React.createElement(UserStatusButton, { icon: "fa-solid fa-arrow-right-from-arc", id: "sign-out-button", userStatus: UserStatus.LoggedOut }))),
+                        React.createElement(UserStatusButton, { icon: "fa-solid fa-arrow-right-from-arc", id: "sign-out-button", userStatus: UserStatus.LoggedOut }),
+                        React.createElement(QRCodeButton, null)
+                    )
+                ),
                 React.createElement(QuickNav, null),
                 React.createElement(Weather, null),
                 React.createElement(Restaurants, null),

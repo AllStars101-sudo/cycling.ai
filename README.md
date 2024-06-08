@@ -1,52 +1,152 @@
-# Cycling.ai
+# Cycling.ai - Comprehensive Sustainable Transit Planner powered by Generative AI
 
-Cycling.ai is an innovative route planning and health advice platform designed to provide users with a comprehensive cycling experience. By integrating advanced mapping technology, real-time weather information, and AI-generated health advice, Cycling.ai serves as the perfect companion for cyclists.
+## Preface
 
-## Core Features
+Cycling.ai was created for the BuildClub Hackathon 2024 by Chris Pagolu and Xianyu Cai.
 
-### User Authentication and Personalized Welcome
-- Users can register and log in to access the platform. Upon logging in, the system displays personalized welcome messages and provides navigation links.
+## Overview
 
-### Route Planning and Map Display
-- Utilizing Google Maps API, users can input their starting and ending points. The system calculates the optimal cycling route and displays it on the map.
-- The map provides detailed route information, including the start and end points, average elevation, and estimated calories burned.
+Cycling.ai is a dynamic multi-platform application designed to provide cyclists with detailed route planning and health analysis. Leveraging the power of AI technologies including Google’s Gemini Flash, OpenAI, Supabase, and Sahha AI for health insights, the application offers a feature-rich experience for users who are deeply invested in their cycling activities. The entire system is deployed on Vercel.
 
-### Real-time Weather Information
-- The system fetches real-time weather information for the user’s current location, displaying the current weather conditions and temperature.
-- It also provides a weather forecast for the coming days, helping users plan their cycling trips accordingly.
+## Features
 
-### AI-Generated Health and Fitness Advice
-- Based on the user’s cycling route and other relevant data, the system generates personalized health tips and fitness advice, helping users better plan and execute their workouts.
+### Web Application
 
-### User Interface and Interaction Design
-- The platform uses modern front-end technologies like React to provide a responsive and user-friendly interface.
-- CSS animations and effects are used to enhance the user experience, offering intuitive route planning and health advice displays.
+1. **Authentication**
+   - Users can log in and log out using Auth0, ensuring secure access to personalized features.
 
-## Key Technologies and Tools
+2. **Route Calculation**
+   - Calculate cycling routes, along with real-time data on distance, average elevation, estimated calories burned, and traffic and roadwork information using various API integrations like Google Maps, OpenWeatherMap, and Bing Maps.
 
-### Front-end Technologies
-- **HTML, CSS, and JavaScript**: For interface development.
-- **React**: Library for building dynamic and interactive user interfaces.
-- **Google Maps API**: For route planning and map display.
+3. **AI-Generated Insights**
+   - Using Google Gemini Flash, generate AI-driven insights about cycling routes focusing on health benefits (with data fed using Sahha API), elevation considerations, weather, traffic conditions, and fun facts.
 
-### Back-end Technologies
-- **Flask**: Python’s Flask framework to handle user requests, route calculations, weather information fetching, and AI-generated advice.
-- **RESTful API**: Interfaces for front-end and back-end communication.
+4. **Popular Spots**
+   - Display popular cycling spots around the user's location with short summaries generated using Google Gemini Flash and images generated using OpenAI's DALL-E 2.
 
-### Integrated Third-Party Services
-- **OpenWeatherMap API**: For real-time weather information.
-- **Iconify**: Library for icon display.
+5. **QR Code Integration**
+   - Generate a QR code for user data, which can be scanned and linked with an iPhone app for additional health data integration.
 
-## Use Cases
+6. **Trip History**
+   - View past trips, with historical data stored and retrieved from Supabase.
 
-- **Daily Cycling Plans**: Users can plan their daily cycling routes using Cycling.ai, getting detailed route information and health advice.
-- **Fitness and Exercise**: AI-generated advice helps users create scientific workout plans and monitor their health during cycling.
-- **Tourism and Exploration**: Users can explore new cycling routes, check the weather conditions at their destinations, and enjoy a safe and pleasant cycling experience.
+7. **AI-Generated Images**
+   - Utilize OpenAI to generate images of the planned routes for better visualization.
 
-## Project Highlights
+### iPhone App
 
-- **Personalization**: Cycling.ai offers a personalized user experience, considering the user’s needs from login to health advice.
-- **Intelligence**: Utilizes AI technology to provide accurate health and fitness advice.
-- **Visualization**: Provides intuitive map and data displays, allowing users to easily understand and plan their cycling routes.
+1. **QR Code Scanner**
+   - Scan QR codes generated by the web app to link the user’s iPhone to their Cycling.ai account, enabling the integration of Sahha AI for further health insights.
 
-Cycling.ai is dedicated to providing the best service for cycling enthusiasts, making every ride safe, healthy, and enjoyable.
+2. **Demographics**
+   - Users can input and update their demographic information.
+
+3. **Sensor Management**
+   - Enable or disable sensors for health monitoring and link health data with Supabase.
+
+4. **Health Analysis**
+   - Obtain daily and weekly health analysis using Sahha AI and store this data in Supabase.
+
+5. **WebView Integration**
+   - View additional insights through web views embedded within the app.
+
+The iPhone app is also open source and available [here](https://github.com/AllStars101-sudo/cycling.ai-ios). It is not available on the App Store or on TestFlight currently.
+
+## Technical Details
+
+### Web Application
+
+- **Backend**: Built using Flask, handling routes and API calls.
+- **Frontend**: Uses HTML, CSS, and React.js for dynamic user interaction.
+- **AI Integration**: 
+  - **Google Gemini Flash**: Configured for natural language responses and summaries.
+  - **OpenAI (DALL-E 2)**: For generating visual content based on route names.
+- **Data Management**: Supabase for real-time data storage and retrieval.
+- **Maps & Geolocation**: Google Maps API for route calculation and displaying directions.
+- **Weather & Traffic**: 
+  - OpenWeatherMap API for weather data.
+  - Bing Maps API for real-time traffic updates.
+  - Sydney Roadwork API for up-to-date roadworks.
+  
+### iPhone Application
+
+- **Language**: SwiftUI for building an intuitive user interface.
+- **Health Data**: Sahha AI for collecting and analyzing health data from sensors.
+- **QR Code Linking**: Integrated QR code scanner for linking the user's device with their Cycling.ai account for more personalised recommendations.
+
+## Motivation
+
+The inspiration for Cycling.ai came from the necessity of having a comprehensive and intelligent tool for cyclists who want to plan routes efficiently while keeping their health and wellness in check. By integrating advanced AI capabilities and real-time data, the goal is to enhance the cycling experience holistically.
+
+## Future Plans
+
+1. **Enhanced AI Insights**
+   - Extend the AI functionalities to provide even more personalized and insightful health recommendations based on historical data trends.
+   
+2. **Social Features**
+   - Introduce social sharing options where users can share their routes and achievements on social media platforms.
+
+3. **Fitness Challenges**
+   - Create community-driven fitness challenges and leaderboards.
+
+4. **Expanded Coverage**
+   - Incorporate additional APIs to extend coverage and data accuracy for more regions worldwide.
+
+5. **Mobile App Enhancements**
+   - Develop richer functionalities within the iOS app, including push notifications for route updates and health insights.
+
+6. **Cross-Platform Support**
+   - Launch an Android version of the mobile app to reach a wider audience.
+
+## Running the Project
+
+### Prerequisites
+
+- Python 3.x
+- Flask and other Python dependencies (listed in `requirements.txt`)
+- .env file with necessary API keys and configurations
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/AllStars101-sudo/cycling.ai.git
+   cd cycling.ai
+   ```
+
+2. Set up the environment:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Configure environment variables in a `.env` file:
+   ```env
+   APP_SECRET_KEY=your_app_secret_key
+   AUTH0_DOMAIN=your_auth0_domain
+   AUTH0_CLIENT_ID=your_auth0_client_id
+   AUTH0_CLIENT_SECRET=your_auth0_client_secret
+   SUPABASE_PROJECT_URL=your_supabase_project_url
+   SUPABASE_PUBLIC_API_KEY=your_supabase_public_api_key
+   GOOGLE_API_KEY=your_google_api_key
+   OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
+   BING_MAPS_API_KEY=your_bing_maps_api_key
+   SYDNEY_API_KEY=your_transportfornsw_api_key
+   GEMINI_API_KEY=your_google_gemini_api_key
+   ```
+
+4. Run the application:
+   ```bash
+   python app.py
+   ```
+
+### Deployment
+
+The application is deployed on Vercel. Ensure all environment variables are correctly set within the Vercel dashboard for the deployment to work seamlessly.
+
+## Contributions
+
+Feel free to fork the repository, make improvements and submit pull requests. Ensure code quality by following the project's coding standards and guidelines.
+
+---
+
+Cycling.ai combines health, technology, and interactive design to create an unparalleled experience for cyclists worldwide. Enjoy your ride! 🚴‍♂️✨
