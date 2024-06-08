@@ -39,8 +39,14 @@ const T = {
 }
 
 const fetchPopularSpots = async (latitude, longitude) => {
-    const response = await fetch(`/places?lat=${latitude}&lng=${longitude}`);
+    const response = await fetch(`/api/places?latitude=${latitude}&longitude=${longitude}`);
     const data = await response.json();
+
+    if (data.error) {
+        console.error('Error fetching popular spots:', data.error);
+        return [];
+    }
+
     return data.results.map(place => ({
         name: place.name,
         image: place.photos ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_API_KEY}` : 'default_image_url'
@@ -104,10 +110,14 @@ const WeatherSnap = () => {
     const [temperature, setTemperature] = React.useState(null);
 
     const fetchWeather = async (latitude, longitude) => {
-        const apiKey = '67531f469868e5a6bb89333b4f5c439e';
-        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`);
+        const response = await fetch(`/api/weather?latitude=${latitude}&longitude=${longitude}`);
         const data = await response.json();
-
+    
+        if (data.error) {
+            console.error('Error fetching weather data:', data.error);
+            return;
+        }
+    
         setWeather(data.weather[0].main);
         setTemperature(data.main.temp);
     };
@@ -170,84 +180,116 @@ const e = React.createElement;
 
 class QuickNav extends React.Component {
     constructor(props) {
-      super(props);
-      this.state = {
-        startLocation: '',
-        endLocation: '',
-        isStartLocationVisible: false,
-      };
+        super(props);
+        this.state = {
+            startLocation: '',
+            endLocation: '',
+            isStartLocationVisible: false,
+        };
     }
-  
-    handleStartLocationChange = (event) => {
-      this.setState({ startLocation: event.target.value });
-    };
-  
-    handleEndLocationChange = (event) => {
-      this.setState({ endLocation: event.target.value });
-    };
-  
-    handleFormSubmit = (event) => {
-      event.preventDefault();
-      fetch('/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ start: this.state.startLocation, end: this.state.endLocation }),
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          alert(`Error: ${data.error}`);
+
+    componentDidMount() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    console.log('Current position:', position);
+                    console.log('Latitude:', position.coords.latitude);
+                    console.log('Longitude:', position.coords.longitude);
+                    this.fetchCurrentAddress(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                    console.error('Error getting current location:', error);
+                }
+            );
         } else {
-          window.location.href = '/directions';
+            console.error('Geolocation is not supported');
         }
-      })
-      .catch(error => console.error('Error:', error));
+    }
+
+    fetchCurrentAddress = async (latitude, longitude) => {
+        console.log('Fetching address for latitude:', latitude, 'longitude:', longitude);
+        const response = await fetch(`/api/reverse_geocode?latitude=${latitude}&longitude=${longitude}`);
+        const data = await response.json();
+        console.log(data.address)
+        if (data.address) {
+            console.log('Current address:', data.address);
+            this.setState({ startLocation: data.address });
+        } else {
+            console.error('Error fetching current address:', data.error);
+        }
     };
-  
+
+    handleStartLocationChange = (event) => {
+        this.setState({ startLocation: event.target.value });
+    };
+
+    handleEndLocationChange = (event) => {
+        this.setState({ endLocation: event.target.value });
+    };
+
+    handleFormSubmit = (event) => {
+        event.preventDefault();
+        fetch('/calculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ start: this.state.startLocation, end: this.state.endLocation }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Error: ${data.error}`);
+            } else {
+                window.location.href = '/directions';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    };
+
     handleArrowClick = () => {
-      this.setState((prevState) => ({
-        isStartLocationVisible: !prevState.isStartLocationVisible,
-      }));
+        this.setState((prevState) => ({
+            isStartLocationVisible: !prevState.isStartLocationVisible,
+        }));
     };
-  
+
     render() {
-      return e(
-        'form',
-        { id: 'quick-nav', onSubmit: this.handleFormSubmit, className: 'quick-nav-form' },
-        e('input', {
-          type: 'text',
-          value: this.state.endLocation,
-          onChange: this.handleEndLocationChange,
-          placeholder: 'Where would you like to go?',
-          className: 'quick-nav-input',
-        }),
-        e(
-          'button',
-          { type: 'button', onClick: this.handleArrowClick, className: 'quick-nav-button' },
-          e('i', { className: this.state.isStartLocationVisible ? 'fa fa-arrow-left' : 'fa fa-arrow-right' })
-        ),
-        this.state.isStartLocationVisible &&
-          e('div', { className: 'quick-nav-input-wrapper' },
+        return e(
+            'form',
+            { id: 'quick-nav', onSubmit: this.handleFormSubmit, className: 'quick-nav-form' },
             e('input', {
-              type: 'text',
-              value: this.state.startLocation,
-              onChange: this.handleStartLocationChange,
-              placeholder: 'Start location',
-              className: 'quick-nav-input',
+                type: 'text',
+                value: this.state.endLocation,
+                onChange: this.handleEndLocationChange,
+                placeholder: 'Where would you like to go?',
+                className: 'quick-nav-input',
             }),
             e(
-              'button',
-              { type: 'submit', className: 'quick-nav-button' },
-              e('i', { className: 'fa fa-check' })
-            )
-          )
-      );
+                'button',
+                { type: 'button', onClick: this.handleArrowClick, className: 'quick-nav-button' },
+                e('i', { className: this.state.isStartLocationVisible ? 'fa fa-arrow-left' : 'fa fa-arrow-right' })
+            ),
+            this.state.isStartLocationVisible &&
+                e('div', { className: 'quick-nav-input-wrapper' },
+                    e('input', {
+                        type: 'text',
+                        value: this.state.startLocation,
+                        onChange: this.handleStartLocationChange,
+                        placeholder: 'Start location',
+                        className: 'quick-nav-input',
+                    }),
+                    e(
+                        'button',
+                        { type: 'submit', className: 'quick-nav-button' },
+                        e('i', { className: 'fa fa-check' })
+                    )
+                )
+        );
     }
-  }
-  
+}
+
 ReactDOM.render(e(QuickNav), document.getElementById('root'));
+
 
 const Weather = () => {
     const getDays = () => {
