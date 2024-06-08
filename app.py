@@ -102,6 +102,9 @@ def calculate():
     print(f"Start Location: {start}")
     print(f"End Location: {end}")
 
+    if not start or not end:
+        return jsonify({'error': 'Missing start or end location'}), 400
+
     url = f"https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins={start}&destinations={end}&mode=bicycling&key={env.get('GOOGLE_API_KEY')}"
 
     response = requests.get(url)
