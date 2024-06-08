@@ -245,16 +245,22 @@ def route_info():
         # safety_settings = Adjust safety settings
         # See https://ai.google.dev/gemini-api/docs/safety-settings
     )
+
     response_text = model.generate_content(data).candidates[0].content.parts[0].text
+    print("AI-generated response:", response_text)
+
     # Split the response text into paragraphs and wrap each with <p> tags
-    paragraphs = response_text.split('\n')
-    response_text_html = ''.join(f'<p>{paragraph.strip()}</p>' for paragraph in paragraphs if paragraph.strip())
+    try:
+        response_json = json.loads(response_text)
+        response_html = ''.join(f'<p>{value}</p>' for value in response_json.values())
+    except json.JSONDecodeError:
+        response_html = ''.join(f'<p>{line.strip()}</p>' for line in response_text.split('\n') if line.strip())
 
     # Get the user ID from the session
     user_id = session.get('user_id')
 
     # Store the additional data in Supabase
-    data = {
+    supabase_data = {
         'user_id': user_id,
         'start': start,
         'end': end,
@@ -263,9 +269,9 @@ def route_info():
         'traffic': traffic_data,
         'roadworks': roadworks_data,
         'calories_burned': int(calories_burned),
-        'response': response_text_html
+        'response': response_html
     }
-    supabase.table('trips').insert(data).execute()
+    supabase.table('trips').insert(supabase_data).execute()
 
     return jsonify({
         'start': start,
@@ -275,7 +281,7 @@ def route_info():
         'traffic': traffic_data,
         'roadworks': roadworks_data,
         'calories_burned': int(calories_burned),
-        'response': response_text_html,
+        'response': response_html,
     })
 
 @app.route('/popular-spots', methods=['GET'])
