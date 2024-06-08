@@ -143,77 +143,86 @@ const MenuSection = (props) => {
 const e = React.createElement;
 
 class QuickNav extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      startLocation: '',
-      endLocation: '',
-      isStartLocationVisible: false,
+    constructor(props) {
+      super(props);
+      this.state = {
+        startLocation: '',
+        endLocation: '',
+        isStartLocationVisible: false,
+      };
+    }
+  
+    handleStartLocationChange = (event) => {
+      this.setState({ startLocation: event.target.value });
     };
-  }
-
-  handleStartLocationChange = (event) => {
-    this.setState({ startLocation: event.target.value });
-  };
-
-  handleEndLocationChange = (event) => {
-    this.setState({ endLocation: event.target.value });
-  };
-
-  handleFormSubmit = (event) => {
-    event.preventDefault();
-    fetch('/calculate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ start: this.state.startLocation, end: this.state.endLocation }),
-    }).then(window.location.href = '/directions');
-  };
-
-  handleArrowClick = () => {
-    this.setState((prevState) => ({
-      isStartLocationVisible: !prevState.isStartLocationVisible,
-    }));
-  };
-
-  render() {
-    return e(
-      'form',
-      { id: 'quick-nav', onSubmit: this.handleFormSubmit, className: 'quick-nav-form' },
-      e('input', {
-        type: 'text',
-        value: this.state.endLocation,
-        onChange: this.handleEndLocationChange,
-        placeholder: 'Where would you like to go?',
-        className: 'quick-nav-input',
-      }),
-      e(
-        'button',
-        { type: 'button', onClick: this.handleArrowClick, className: 'quick-nav-button' },
-        e('i', { className: this.state.isStartLocationVisible ? 'fa fa-arrow-left' : 'fa fa-arrow-right' })
-      ),
-      this.state.isStartLocationVisible &&
-        e('div', { className: 'quick-nav-input-wrapper' },
-          e('input', {
-            type: 'text',
-            value: this.state.startLocation,
-            onChange: this.handleStartLocationChange,
-            placeholder: 'Start location',
-            className: 'quick-nav-input',
-          }),
-          e(
-            'button',
-            { type: 'submit', className: 'quick-nav-button' },
-            e('i', { className: 'fa fa-check' })
+  
+    handleEndLocationChange = (event) => {
+      this.setState({ endLocation: event.target.value });
+    };
+  
+    handleFormSubmit = (event) => {
+      event.preventDefault();
+      fetch('/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ start: this.state.startLocation, end: this.state.endLocation }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          alert(`Error: ${data.error}`);
+        } else {
+          window.location.href = '/directions';
+        }
+      })
+      .catch(error => console.error('Error:', error));
+    };
+  
+    handleArrowClick = () => {
+      this.setState((prevState) => ({
+        isStartLocationVisible: !prevState.isStartLocationVisible,
+      }));
+    };
+  
+    render() {
+      return e(
+        'form',
+        { id: 'quick-nav', onSubmit: this.handleFormSubmit, className: 'quick-nav-form' },
+        e('input', {
+          type: 'text',
+          value: this.state.endLocation,
+          onChange: this.handleEndLocationChange,
+          placeholder: 'Where would you like to go?',
+          className: 'quick-nav-input',
+        }),
+        e(
+          'button',
+          { type: 'button', onClick: this.handleArrowClick, className: 'quick-nav-button' },
+          e('i', { className: this.state.isStartLocationVisible ? 'fa fa-arrow-left' : 'fa fa-arrow-right' })
+        ),
+        this.state.isStartLocationVisible &&
+          e('div', { className: 'quick-nav-input-wrapper' },
+            e('input', {
+              type: 'text',
+              value: this.state.startLocation,
+              onChange: this.handleStartLocationChange,
+              placeholder: 'Start location',
+              className: 'quick-nav-input',
+            }),
+            e(
+              'button',
+              { type: 'submit', className: 'quick-nav-button' },
+              e('i', { className: 'fa fa-check' })
+            )
           )
-        )
-    );
+      );
+    }
   }
-}
-
-ReactDOM.render(e(QuickNav), document.getElementById('root'));
-
+  
+  ReactDOM.render(e(QuickNav), document.getElementById('root'));
+  
 
 const Weather = () => {
     const getDays = () => {
