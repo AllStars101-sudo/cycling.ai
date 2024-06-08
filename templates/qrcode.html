@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Linking Pass</title>
+  <link href='https://fonts.googleapis.com/css?family=Roboto:400,700' rel='stylesheet' type='text/css'>
+  <link rel='stylesheet' href='https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css'>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/qrcode.css') }}">
+</head>
+<body>
+<div id="container">
+  <div id="barCode"><img id="qrCodeImage" src=""/></div>
+  <div id="content"> 
+    <div class="location" id="from">
+      <div class="code">WEB</div>
+      <div class="city">World Wide Web</div>
+    </div>
+    <div class="location" id="bicycle">
+      <hr/><span class="ion-android-bicycle"></span>
+    </div>
+    <div class="location" id="to">
+      <div class="code">IOS</div>
+      <div class="city">Apple Inc.</div>
+    </div>
+    <hr class="lineOne"/>
+    <div id="info">
+      <div class="col1">
+        <div class="greyTxt">PASSENGER</div>
+        <div class="specifics" id="userName"></div>
+      </div>
+      <div class="col2">
+        <div class="greyTxt">USER ID</div>
+        <div class="specifics" id="userId"></div>
+      </div>
+    </div>
+    <hr class="lineTwo"/>
+    <div id="boarding">
+      <div class="title">LINKING</div>
+      <div class="boardInfo" id="linkingTime"></div>
+      <div class="icon"><span class="ion-ios-printer"></span></div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/qrcode.js') }}"></script>
+</body>
+</html>
