@@ -6,7 +6,7 @@ Cycling.ai was created for the BuildClub Hackathon 2024 by Chris Pagolu and Xian
 
 ## Overview
 
-Cycling.ai is a dynamic multi-platform application designed to provide cyclists with detailed route planning and health analysis. Leveraging the power of AI technologies including Google’s Gemini Flash, OpenAI, Supabase, and Sahha AI for health insights, the application offers a feature-rich experience for users who are deeply invested in their cycling activities. The entire system is deployed on Vercel.
+Cycling.ai is a dynamic multi-platform application designed to provide cyclists with detailed route planning and health analysis. Leveraging the power of AI technologies including Google’s Gemini Flash, OpenAI, Supabase, and Sahha AI for health insights, the application offers a feature-rich experience for users who are deeply invested in their cycling activities.
 
 ## Features
 
@@ -138,10 +138,6 @@ The inspiration for Cycling.ai came from the necessity of having a comprehensive
    ```bash
    python app.py
    ```
-
-### Deployment
-
-The application is deployed on Vercel. Ensure all environment variables are correctly set within the Vercel dashboard for the deployment to work seamlessly.
 
 ## Contributions
 
