@@ -312,39 +312,64 @@ const Weather = () => {
 };
 
 const Restaurants = () => {
-    const getRestaurants = () => {
-        return [{
-                desc: "Tuesday, 8:00 pm.",
-                id: 1,
-                image: "",
-                title: "Sydney Opera House->UNSW"
-            }, {
-                desc: "Wednesday, 9:00pm",
-                id: 2,
-                image: "",
-                title: "George St -> Maroubra"
-            }, {
-                desc: "Sunday, 12:00pm",
-                id: 3,
-                image: "",
-                title: "Mascot -> Sydney Intl Airport"
-            }, {
-                desc: "Friday, 6:00am",
-                id: 4,
-                image: "",
-                title: "Coogee -> Bondi Beach"
-            }].map((restaurant) => {
+    const [trips, setTrips] = React.useState([]);
+
+    React.useEffect(() => {
+        const fetchTrips = async () => {
+            try {
+                const response = await fetch('/trips');
+                const data = await response.json();
+                setTrips(data);
+
+                // Fetch DALL-E 2 generated images for each trip asynchronously
+                data.forEach(async (trip) => {
+                    const imageResponse = await fetch('/generate_image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ prompt: `${trip.start} to ${trip.end}` }),
+                    });
+                    const imageData = await imageResponse.json();
+
+                    // Update the specific trip with the generated image URL
+                    setTrips((prevTrips) =>
+                        prevTrips.map((prevTrip) =>
+                            prevTrip.id === trip.id ? { ...prevTrip, image: imageData.image_url } : prevTrip
+                        )
+                    );
+                });
+            } catch (error) {
+                console.error('Error fetching trips:', error);
+            }
+        };
+
+        fetchTrips();
+    }, []);
+
+    const getTrips = () => {
+        return trips.map((trip) => {
             const styles = {
-                backgroundImage: `url(${restaurant.image})`
+                backgroundImage: `url(${trip.image})`,
             };
-            return (React.createElement("div", { key: restaurant.id, className: "restaurant-card background-image", style: styles },
-                React.createElement("div", { className: "restaurant-card-content" },
-                    React.createElement("div", { className: "restaurant-card-content-items" },
-                        React.createElement("span", { className: "restaurant-card-title" }, restaurant.title),
-                        React.createElement("span", { className: "restaurant-card-desc" }, restaurant.desc)))));
+            return (
+                React.createElement("div", { key: trip.id, className: "restaurant-card background-image", style: styles },
+                    React.createElement("div", { className: "restaurant-card-content" },
+                        React.createElement("div", { className: "restaurant-card-content-items" },
+                            React.createElement("span", { className: "restaurant-card-title" }, `${trip.start} -> ${trip.end}`),
+                            React.createElement("span", { className: "restaurant-card-desc" }, trip.distance)
+                        )
+                    )
+                )
+            );
         });
     };
-    return (React.createElement(MenuSection, { icon: "fa fa-history", id: "restaurants-section", title: "Your past trips" }, getRestaurants()));
+
+    return (
+        React.createElement(MenuSection, { icon: "fa fa-history", id: "restaurants-section", title: "Your past trips" },
+            getTrips()
+        )
+    );
 };
 
 const Movies = () => {
