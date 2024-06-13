@@ -11,7 +11,6 @@ from datetime import datetime
 import openai
 from transformers import BertTokenizer
 from geopy.geocoders import Nominatim
-import openai
 import google.generativeai as genai
 import os
 from io import BytesIO
@@ -19,6 +18,7 @@ import base64
 import qrcode
 
 from supabase import create_client, Client
+
 load_dotenv()
 
 # Initialize Supabase client
@@ -27,8 +27,8 @@ key = os.getenv("SUPABASE_PUBLIC_API_KEY")
 supabase: Client = create_client(url, key)
 
 genai.configure(api_key=env.get('GEMINI_API_KEY'))
+
 # Create the model
-# See https://ai.google.dev/api/python/google/generativeai/GenerativeModel
 generation_config = {
   "temperature": 1,
   "top_p": 0.95,
@@ -57,7 +57,7 @@ oauth.register(
 )
 
 def truncate_text(text, max_tokens=15000):
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')  # replace 'bert-base-uncased' with a model that suits your needs
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     tokens = tokenizer.encode(text, return_tensors='pt')[0]
     if len(tokens) > max_tokens:
         tokens = tokens[:max_tokens]
@@ -72,7 +72,6 @@ def home():
         session=session.get("user"),
         pretty=json.dumps(session.get("user"), indent=4),
     )
-
 
 @app.route("/home")
 def test():
@@ -93,19 +92,16 @@ def callback():
     session["user"] = token
 
     user_info = token['userinfo']
-    print(user_info)
     user_id = user_info['sub']
     session["user_id"] = user_id
 
     return redirect("/home")
-
 
 @app.route("/login")
 def login():
     return oauth.auth0.authorize_redirect(
         redirect_uri=url_for("callback", _external=True)
     )
-
 
 @app.route("/logout")
 def logout():
@@ -123,15 +119,11 @@ def logout():
         )
     )
 
-
 @app.route('/calculate', methods=['POST'])
 def calculate():
     data = request.get_json()
     start = data.get('start')
     end = data.get('end')
-
-    print(f"Start Location: {start}")
-    print(f"End Location: {end}")
 
     if not start or not end:
         return jsonify({'error': 'Missing start or end location'}), 400
@@ -170,19 +162,14 @@ def route_info():
     start = session.get('start')
     end = session.get('end')
 
-    # Initialize data
     directions_data = places_data = elevation_data = weather_data = traffic_data = roadworks_data = None
 
     try:
-        # Get route from Google Directions API
         directions_response = requests.get(f'https://maps.googleapis.com/maps/api/directions/json?origin={start}&destination={end}&key={env.get("GOOGLE_API_KEY")}')
         directions_data = directions_response.json()
-        print("Directions Data:", directions_data)
-        # Check if the response contains the expected data
         if 'routes' not in directions_data or not directions_data['routes']:
             return jsonify({'error': 'No routes found from Google Directions API'})
 
-        # Get points of interest near the midpoint from Google Places API
         mid_index = len(directions_data['routes'][0]['legs'][0]['steps']) // 2
         mid_step = directions_data['routes'][0]['legs'][0]['steps'][mid_index]
         mid_point = polyline.decode(mid_step['polyline']['points'])[0]
@@ -190,86 +177,59 @@ def route_info():
         places_response = requests.get(f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={mid_point[0]},{mid_point[1]}&radius=5000&key={env.get("GOOGLE_API_KEY")}')
         places_json = places_response.json()
         places_data = places_json.get('results', [])[:20]
-        print("Places Data:", places_data)
 
-        # Get latitude and longitude of start location from Google Geocoding API
         geocoding_response = requests.get(f'https://maps.googleapis.com/maps/api/geocode/json?address={start}&key={env.get("GOOGLE_API_KEY")}')
         geocoding_data = geocoding_response.json()
         start_lat = geocoding_data['results'][0]['geometry']['location']['lat']
         start_lng = geocoding_data['results'][0]['geometry']['location']['lng']
-        # Get latitude and longitude of end location from Google Geocoding API
         geocoding_response_end = requests.get(f'https://maps.googleapis.com/maps/api/geocode/json?address={end}&key={env.get("GOOGLE_API_KEY")}')
         geocoding_data_end = geocoding_response_end.json()
         end_lat = geocoding_data_end['results'][0]['geometry']['location']['lat']
         end_lng = geocoding_data_end['results'][0]['geometry']['location']['lng']
 
-        # Get elevation data from Google Elevation API
         elevation_response = requests.get(f'https://maps.googleapis.com/maps/api/elevation/json?path=enc:{polyline.encode([(start_lat, start_lng), (end_lat, end_lng)])}&samples=100&key={env.get("GOOGLE_API_KEY")}')
         elevation_data = elevation_response.json()
 
-        # Calculate average elevation
         elevations = [result['elevation'] for result in elevation_data['results']]
         average_elevation = sum(elevations) / len(elevations)
-        print("Elevation Data:", elevation_data)
 
-        # Get weather data from OpenWeatherMap API
         weather_response = requests.get(f'http://api.openweathermap.org/data/2.5/weather?lat={start_lat}&lon={start_lng}&appid={env.get("OPENWEATHERMAP_API_KEY")}')
         weather_data = weather_response.json()
 
-        # Get traffic data from Bing Maps API
         traffic_response = requests.get(f'http://dev.virtualearth.net/REST/v1/Traffic/Incidents/{start_lat},{start_lng}?key={env.get("BING_MAPS_API_KEY")}')
         traffic_data = traffic_response.json()
-        print("Traffic Data:", traffic_data)
 
-        # Get roadworks data from Sydney Roadwork API
         roadworks_response = requests.get(
             'https://api.transport.nsw.gov.au/v1/live/hazards/roadwork/all',
             headers={'Authorization': f'Bearer {env.get("SYDNEY_API_KEY")}'},
         )
         roadworks_data = roadworks_response.json()
-        print("Roadworks Data:", roadworks_data)
 
     except Exception as e:
         return jsonify({'error': str(e)})
 
-    # Calculate health metrics
-    distance = directions_data['routes'][0]['legs'][0]['distance']['value'] / 1000  # Distance in km
-    calories_burned = distance * 50  # Rough estimate of calories burned per km
+    distance = directions_data['routes'][0]['legs'][0]['distance']['value'] / 1000
+    calories_burned = distance * 50
 
     user_id = session.get('user_id')
-    
-    # Retrieve the user's health data from Supabase
     health_data_response = supabase.table('user_health_data').select('health_data').eq('user_id', user_id).order('created_at', desc=True).limit(1).execute()
     health_data = health_data_response.data[0]['health_data'] if health_data_response.data else ''
-    
-    # Prepare the data for the Gemini API
-    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well. Format your response in plain English. Your response must be separeted into paragraphs: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}. Also, consider the following health data for the user if it is available: {health_data}."
-    
-    # Truncate the data to fit within the token limit
-    # data = truncate_text(data)
 
-    # Generate a summary with Gemini 1.5 Flash
+    data = f"I have collected the following data for a route from {start} to {end}. Can you summarize this information with a focus on health benefits of cycling? What about cycling on this route given its elevation? Give as much information about these as possible. Talk about the weather. Talk about the traffic. Give a fun fact about cycling as well. Format your response in plain English. Your response must be separeted into paragraphs: {directions_data}, {places_data}, {elevation_data}, {weather_data}, {traffic_data}, {roadworks_data}. Also, consider the following health data for the user if it is available: {health_data}."
+
     model = genai.GenerativeModel(
         model_name="gemini-1.5-flash",
         generation_config=generation_config,
-        # safety_settings = Adjust safety settings
-        # See https://ai.google.dev/gemini-api/docs/safety-settings
     )
 
     response_text = model.generate_content(data).candidates[0].content.parts[0].text
-    print("AI-generated response:", response_text)
 
-    # Split the response text into paragraphs and wrap each with <p> tags
     try:
         response_json = json.loads(response_text)
         response_html = ''.join(f'<p>{value}</p>' for value in response_json.values())
     except json.JSONDecodeError:
         response_html = ''.join(f'<p>{line.strip()}</p>' for line in response_text.split('\n') if line.strip())
 
-    # Get the user ID from the session
-    user_id = session.get('user_id')
-
-    # Store the additional data in Supabase
     supabase_data = {
         'user_id': user_id,
         'start': start,
@@ -297,12 +257,10 @@ def route_info():
 @app.route('/popular-spots', methods=['GET'])
 def popular_spots():
     try:
-        # Check if the user has granted location permission
         if request.args.get('lat') and request.args.get('lng'):
             lat = request.args.get('lat')
             lng = request.args.get('lng')
         else:
-            # Use Google Maps Geolocation API for IP-based geolocation
             url = f"https://www.googleapis.com/geolocation/v1/geolocate?key={env.get('GOOGLE_API_KEY')}"
             payload = {
                 'considerIp': 'true'
@@ -314,31 +272,23 @@ def popular_spots():
                 lat = data['location']['lat']
                 lng = data['location']['lng']
             else:
-                # Fallback to default location if geolocation fails
-                lat, lng = 37.7749, -122.4194  # Example: San Francisco coordinates
+                lat, lng = 37.7749, -122.4194
     except Exception as e:
-        print(f"Error in geolocation: {str(e)}")
-        # Fallback to default location if an exception occurs
-        lat, lng = 37.7749, -122.4194  # Example: San Francisco coordinates
+        lat, lng = 37.7749, -122.4194
 
     try:
-        # Make a request to the Google Maps Places API
         url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius=5000&type=tourist_attraction&key={env.get('GOOGLE_API_KEY')}"
         response = requests.get(url)
         data = response.json()
 
-        # Extract the place names from the API response
         place_names = [result['name'] for result in data['results']]
 
         movies = []
-        # Generate a description of the spots with Gemini 1.5 Flash
         model = genai.GenerativeModel(
             model_name="gemini-1.5-flash",
             generation_config=generation_config,
-            # safety_settings = Adjust safety settings
-            # See https://ai.google.dev/gemini-api/docs/safety-settings
         )
-        for i, place_name in enumerate(place_names[:4]):  # Limit to 4 places
+        for i, place_name in enumerate(place_names[:4]):
             response = model.generate_content("Write a very short summary of the following place not exceeding 1 line: " + place_name)
             description = json.loads(response.candidates[0].content.parts[0].text)
             movies.append({
@@ -350,7 +300,6 @@ def popular_spots():
 
         return jsonify({'movies': movies})
     except Exception as e:
-        print(f"Error in fetching popular spots: {str(e)}")
         return jsonify({'error': 'Failed to fetch popular spots'}), 500
 
 @app.route('/generate_image', methods=['POST'])
@@ -374,7 +323,6 @@ def generate_image():
 
         return jsonify({'image_url': image_url})
     except Exception as e:
-        print(f"Error in generating image: {str(e)}")
         return jsonify({'error': 'Failed to generate image'}), 500
 
 @app.route('/trips', methods=['GET'])
@@ -414,7 +362,6 @@ def linking():
 def server_error(e):
     return jsonify(error=str(e)), 500
 
-
 @app.route('/api/weather', methods=['GET'])
 def get_weather():
     latitude = request.args.get('latitude')
@@ -451,37 +398,12 @@ def reverse_geocode():
     longitude = request.args.get('longitude')
     api_key = os.environ.get('GOOGLE_API_KEY')
 
-    print(f"Reverse geocoding for latitude: {latitude}, longitude: {longitude}")
-
-    try:
-        url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={latitude},{longitude}&key={api_key}"
-        response = requests.get(url)
-        data = response.json()
-
-        if data["status"] == "OK":
-            address = data["results"][0]["formatted_address"]
-            print(f"Reverse geocoded address: {address}")
-            return jsonify({'address': address})
-        else:
-            print(f"Reverse geocoding failed with status: {data['status']}")
-            return jsonify({'error': 'Failed to fetch address'}), 500
-    except Exception as e:
-        print(f"Error in reverse geocoding: {str(e)}")
-        return jsonify({'error': 'Failed to fetch address'}), 500
-    latitude = request.args.get('latitude')
-    longitude = request.args.get('longitude')
-    api_key = os.environ.get('GOOGLE_API_KEY')
-
-    print(f"Reverse geocoding for latitude: {latitude}, longitude: {longitude}")
-
     try:
         geolocator = Nominatim(user_agent="myGeocoder")
         location = geolocator.reverse(f"{latitude}, {longitude}")
         address = location.address
-        print(f"Reverse geocoded address: {address}")
         return jsonify({'address': address})
     except Exception as e:
-        print(f"Error in reverse geocoding: {str(e)}")
         return jsonify({'error': 'Failed to fetch address'}), 500
 
 if __name__ == "__main__":
